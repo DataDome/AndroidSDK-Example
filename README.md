@@ -1,4 +1,4 @@
-# IOSSDK-Example
+# AndroidSDK-Example
 
 [![Version Badge](https://api.bintray.com/packages/datadome-org/datadome/datadome-android-sdk/images/download.svg)](https://datadome.co/)
 ![MIT](https://img.shields.io/cocoapods/l/DataDomeSDK)
