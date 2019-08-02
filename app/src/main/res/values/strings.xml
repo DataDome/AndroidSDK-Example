@@ -4,6 +4,6 @@
     <string name="make_a_request">Request</string>
     <string name="clear_cache">Clear cache</string>
     <string name="current_useragent">Current UserAgent:</string>
-    <string name="use_custom_network_layer">User network layer</string>
+    <string name="use_custom_network_layer">User DataDome network layer</string>
     <string name="blockua">BLOCKUA</string>
 </resources>

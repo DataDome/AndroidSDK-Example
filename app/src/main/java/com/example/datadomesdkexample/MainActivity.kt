@@ -37,9 +37,7 @@ class MainActivity: AppCompatActivity() {
             "Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30"
     }
 
-    private var customNetworkLayerSwitch: Switch? = null
     private lateinit var userAgent: String
-
     private var dataDomeSdk: DataDomeSDK.Builder? = null
 
     private var dataDomeSDKListener: DataDomeSDKListener = object: DataDomeSDKListener() {
@@ -98,7 +96,6 @@ class MainActivity: AppCompatActivity() {
             .listener(dataDomeSDKListener)
             .agent(userAgent)
 
-        customNetworkLayerSwitch = findViewById(R.id.use_custom_network_layer_switch)
         ActivityCompat.requestPermissions(this, arrayOf<String>(Manifest.permission.CAMERA), 101)
 
         _clearCache()
@@ -122,10 +119,10 @@ class MainActivity: AppCompatActivity() {
 
     fun makeRequest(v: View) {
         val endpoint = Helper.getConfigValue(this, "datadome.endpoint")
-        if (customNetworkLayerSwitch!!.isChecked) {
-            makeOkHttpRequest(endpoint)
-        } else {
+        if (use_custom_network_layer_switch.isChecked) {
             makeDatadomeHTTPClientRequest(endpoint)
+        } else {
+            makeOkHttpRequest(endpoint)
         }
     }
 
