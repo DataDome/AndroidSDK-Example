@@ -1,30 +1,22 @@
 package com.example.datadomesdkexample
 
 import android.Manifest
-import android.app.Activity
 import android.os.AsyncTask
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.preference.PreferenceManager
 import android.util.Log
 import android.view.View
-import android.widget.Switch
-import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import co.datadome.sdk.DataDomeInterceptor
 import co.datadome.sdk.DataDomeSDK
-import co.datadome.sdk.internal.DataDomeActivity
 import co.datadome.sdk.internal.DataDomeEvent
 import co.datadome.sdk.internal.DataDomeSDKListener
 import kotlinx.android.synthetic.main.activity_main.*
-import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.logging.HttpLoggingInterceptor
-import org.json.JSONException
-import org.json.JSONObject
 import java.io.IOException
 import java.lang.ref.WeakReference
 
@@ -119,15 +111,7 @@ class MainActivity: AppCompatActivity() {
 
     fun makeRequest(v: View) {
         val endpoint = Helper.getConfigValue(this, "datadome.endpoint")
-        if (use_custom_network_layer_switch.isChecked) {
-            makeDatadomeHTTPClientRequest(endpoint)
-        } else {
-            makeOkHttpRequest(endpoint)
-        }
-    }
-
-    private fun makeDatadomeHTTPClientRequest(endPoint: String? = "") {
-        dataDomeSdk?.get(endPoint)?.apply()
+        makeOkHttpRequest(endpoint)
     }
 
     private fun makeOkHttpRequest(endPoint: String? = "") {
@@ -181,61 +165,4 @@ class MainActivity: AppCompatActivity() {
             return null
         }
     }
-
-//    internal class OkHttpRequestTask(activity: Activity) : AsyncTask<String, Void, Void>() {
-//        var activityWeakReference: WeakReference<Activity>
-//
-//        init {
-//            activityWeakReference = WeakReference<Activity>(activity)
-//        }
-//
-//        override fun doInBackground(vararg args: String): Void? {
-//            val activity = activityWeakReference.get()
-//            if (activity != null) {
-//                val builder = OkHttpClient.Builder()
-//                builder.addInterceptor(DataDomeInterceptor(
-//                    activity.application,
-//                    dataDomeSDKListener,
-//                    "Client_Side_Key",
-//                    BuildConfig.VERSION_NAME)
-//                )
-//                val loggingInterceptor = HttpLoggingInterceptor()
-//                loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BASIC)
-//                loggingInterceptor.redactHeader("Authorization")
-//                builder.addInterceptor(loggingInterceptor)
-//                val client = builder.build()
-//
-//                val postdata = JSONObject()
-//                try {
-//                    postdata.put("username", "aneh")
-//                    postdata.put("password", "12345")
-//                } catch (e: JSONException) {
-//                    // TODO Auto-generated catch block
-//                    e.printStackTrace()
-//                }
-//
-//                val MEDIA_TYPE = MediaType.parse("application/json")
-//                val body = RequestBody.create(MEDIA_TYPE, postdata.toString())
-//
-//                val request = Request.Builder()
-//                    .header("User-Agent", args[1])
-//                    .url(args[0])
-//                    .post(body)
-//                    .build()
-//
-//                try {
-//                    val response = client.newCall(request).execute()
-//                    // do what you want with response
-//                    Log.d(TAG, response.header("Date"))
-//                    if (response.body() != null) {
-//                        response.body()?.close()
-//                    }
-//                } catch (e: IOException) {
-//                    Log.d(TAG, e.message)
-//                }
-//
-//            }
-//            return null
-//        }
-//    }
 }
