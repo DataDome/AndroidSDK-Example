@@ -1,6 +1,7 @@
 package com.example.datadomesdkexample
 
 import android.Manifest
+import android.content.Context
 import android.os.AsyncTask
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -8,16 +9,17 @@ import androidx.preference.PreferenceManager
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
+import co.datadome.sdk.DataDomeEvent
 import co.datadome.sdk.DataDomeInterceptor
 import co.datadome.sdk.DataDomeSDK
-import co.datadome.sdk.internal.DataDomeEvent
-import co.datadome.sdk.internal.DataDomeSDKListener
+import co.datadome.sdk.DataDomeSDKListener
 import kotlinx.android.synthetic.main.activity_main.*
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
+import java.lang.ref.Reference
 import java.lang.ref.WeakReference
 
 class MainActivity: AppCompatActivity() {
@@ -33,13 +35,6 @@ class MainActivity: AppCompatActivity() {
     private var dataDomeSdk: DataDomeSDK.Builder? = null
 
     private var dataDomeSDKListener: DataDomeSDKListener = object: DataDomeSDKListener() {
-        override fun onDataDomeResponse(code: Int, response: String?) {
-            Log.d(TAG, "onDataDomeResponse")
-            runOnUiThread {
-                if (response != null)
-                    Toast.makeText(this@MainActivity, "Response code: $code", Toast.LENGTH_LONG).show()
-            }
-        }
 
         override fun onError(errno: Int, error: String?) {
             Log.d(TAG, "onError")
@@ -109,6 +104,31 @@ class MainActivity: AppCompatActivity() {
         _clearCache()
     }
 
+    fun clickOnBackBehaviour(v: View) {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Back button behaviour")
+        builder.setMessage("Choose Back button behaviour for Captcha page")
+
+        builder.setPositiveButton("Background") { dialog, which ->
+            dataDomeSdk = dataDomeSdk?.backBehaviour(DataDomeSDK.BackBehaviour.GO_BACKGROUND)
+            Toast.makeText(applicationContext,
+                "Back button will go in background", Toast.LENGTH_LONG).show()
+        }
+
+        builder.setNegativeButton("Close and back") { dialog, which ->
+            dataDomeSdk = dataDomeSdk?.backBehaviour(DataDomeSDK.BackBehaviour.GO_BACK)
+            Toast.makeText(applicationContext,
+                "Back button will close captcha page", Toast.LENGTH_LONG).show()
+        }
+
+        builder.setNeutralButton("Nothing") { dialog, which ->
+            dataDomeSdk = dataDomeSdk?.backBehaviour(DataDomeSDK.BackBehaviour.BLOCKED)
+            Toast.makeText(applicationContext,
+                "Back button will make nothing", Toast.LENGTH_LONG).show()
+        }
+        builder.show()
+    }
+
     fun makeRequest(v: View) {
         val endpoint = Helper.getConfigValue(this, "datadome.endpoint")
         makeOkHttpRequest(endpoint)
@@ -117,23 +137,32 @@ class MainActivity: AppCompatActivity() {
     private fun makeOkHttpRequest(endPoint: String? = "") {
         val dataDomeInterceptor = DataDomeInterceptor(
             application,
-            dataDomeSDKListener,
-            BuildConfig.DATADOME_SDK_KEY,
-            BuildConfig.VERSION_NAME
+            dataDomeSdk
         )
-        var task = OkHttpRequestTask(dataDomeInterceptor)
-        task.execute(endPoint, userAgent)
+        val numberOfRequest = if (switchMultipleRequest.isChecked) 5 else 1
+        for (i in 1..numberOfRequest) {
+            var task = OkHttpRequestTask(dataDomeInterceptor, "$i", this)
+            task.execute(endPoint, userAgent)
+        }
     }
 
-    internal class OkHttpRequestTask(dataDomeInterceptor: DataDomeInterceptor) : AsyncTask<String, Void, Void>() {
+
+    internal class OkHttpRequestTask(dataDomeInterceptor: DataDomeInterceptor, customId: String = "", contextForToast: Context? = null) : AsyncTask<String, Void, Void>() {
         var dataDomeInterceptorRef: WeakReference<DataDomeInterceptor>
+        var customTextRef: Reference<String>
+        var contextForToastRef: Reference<Context?>
 
         init {
-            dataDomeInterceptorRef = WeakReference<DataDomeInterceptor>(dataDomeInterceptor)
+            dataDomeInterceptorRef = WeakReference(dataDomeInterceptor)
+            customTextRef = WeakReference(customId)
+            contextForToastRef = WeakReference(contextForToast)
         }
 
         override fun doInBackground(vararg args: String): Void? {
             val dataDomeInterceptor = dataDomeInterceptorRef.get()
+            val customText = customTextRef.get()
+            val contextForToast = contextForToastRef.get()
+
             if (dataDomeInterceptor != null) {
                 val builder = OkHttpClient.Builder()
 
@@ -151,12 +180,21 @@ class MainActivity: AppCompatActivity() {
                     .build()
 
                 try {
-                    val response = client.newCall(request).execute()
-                    // do what you want with response
-                    Log.d(TAG, response.header("Date"))
-                    if (response.body() != null) {
-                        response.body()?.close()
+                    var callback: Callback = object: Callback {
+                        override fun onFailure(call: Call, e: IOException) {
+                            Log.d(TAG,"ERROR")
+                        }
+
+                        override fun onResponse(call: Call, response: Response) {
+                            Log.d(TAG,"Task $customText -> ${response.code()}")
+                            if (contextForToast != null)
+                                (contextForToast as? MainActivity)?.runOnUiThread {
+                                    Toast.makeText(contextForToast, "Task $customText response : ${response.code()}", Toast.LENGTH_SHORT).show()
+                                }
+                        }
                     }
+
+                    client.newCall(request).enqueue(callback)
                 } catch (e: IOException) {
                     Log.d(TAG, e.message)
                 }

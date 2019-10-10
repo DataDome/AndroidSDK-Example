@@ -6,4 +6,6 @@
     <string name="current_useragent">Current UserAgent:</string>
     <string name="use_custom_network_layer">User DataDome network layer</string>
     <string name="blockua">BLOCKUA</string>
+    <string name="several_requests">Several requests</string>
+    <string name="back_behaviour">captcha back behaviour</string>
 </resources>
