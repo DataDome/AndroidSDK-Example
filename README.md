@@ -3,7 +3,7 @@
 [![Version Badge](https://api.bintray.com/packages/datadome-org/datadome/datadome-android-sdk/images/download.svg)](https://datadome.co/)
 ![MIT](https://img.shields.io/cocoapods/l/DataDomeSDK)
 
-This sample show how to use __DataDomeSDK__ with the OKHTTP Interceptor.
+This sample show how to use __DataDomeSDK__ with the OKHTTP Interceptor and manual integration (:warning:).
 
 ## Usage
 
