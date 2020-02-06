@@ -11,16 +11,19 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
-import co.datadome.sdk.DataDomeEvent
-import co.datadome.sdk.DataDomeInterceptor
-import co.datadome.sdk.DataDomeSDK
-import co.datadome.sdk.DataDomeSDKListener
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
 import java.lang.ref.Reference
 import java.lang.ref.WeakReference
+import android.view.MotionEvent
+import co.datadome.sdk.*
+import okio.Buffer
+import okio.GzipSource
+import java.nio.charset.Charset
+import java.util.HashMap
+
 
 class MainActivity: AppCompatActivity() {
 
@@ -34,7 +37,35 @@ class MainActivity: AppCompatActivity() {
     private lateinit var userAgent: String
     private var dataDomeSdk: DataDomeSDK.Builder? = null
 
+    private var dataDomeSDKManualIntegrationListener: DataDomeSDKManualIntegrationListener = object: DataDomeSDKManualIntegrationListener() {
+        private val MANUALTAG = "MANUAL " + MainActivity::class.java.simpleName
+
+        override fun onRequestInProgress(requestId: Int?) {
+            super.onRequestInProgress(requestId)
+            Log.d(MANUALTAG, "onRequestInProgress " + requestId)
+        }
+
+        override fun onComplete(requestId: Int?) {
+            super.onComplete(requestId)
+            Log.d(MANUALTAG, "onComplete")
+        }
+
+        override fun onError(requestId: Int?, errorMessage: String?) {
+            super.onError(requestId, errorMessage)
+            Log.d(MANUALTAG, "onError")
+        }
+    }
+
     private var dataDomeSDKListener: DataDomeSDKListener = object: DataDomeSDKListener() {
+
+        override fun onDataDomeResponse(code: Int, response: String?) {
+            Log.d(TAG, "onDataDomeResponse")
+            super.onDataDomeResponse(code, response)
+            runOnUiThread {
+                if (response != null)
+                    Toast.makeText(this@MainActivity, "Response code: $code", Toast.LENGTH_LONG).show()
+            }
+        }
 
         override fun onError(errno: Int, error: String?) {
             Log.d(TAG, "onError")
@@ -81,6 +112,7 @@ class MainActivity: AppCompatActivity() {
         dataDomeSdk = DataDomeSDK
             .with(application, BuildConfig.DATADOME_SDK_KEY, BuildConfig.VERSION_NAME)
             .listener(dataDomeSDKListener)
+            .manualListener(dataDomeSDKManualIntegrationListener)
             .agent(userAgent)
 
         ActivityCompat.requestPermissions(this, arrayOf<String>(Manifest.permission.CAMERA), 101)
@@ -146,6 +178,10 @@ class MainActivity: AppCompatActivity() {
         }
     }
 
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        dataDomeSdk?.handleTouchEvent(event);
+        return super.onTouchEvent(event)
+    }
 
     internal class OkHttpRequestTask(dataDomeInterceptor: DataDomeInterceptor, customId: String = "", contextForToast: Context? = null) : AsyncTask<String, Void, Void>() {
         var dataDomeInterceptorRef: WeakReference<DataDomeInterceptor>
@@ -203,4 +239,108 @@ class MainActivity: AppCompatActivity() {
             return null
         }
     }
+
+    // Manual integration
+
+    private val UTF8 = Charset.forName("UTF-8")
+    private fun handleBlockedResponse(response: Response, idToRedo: Int?) {
+        val responseBody = response.body() ?: return
+        val request = response.request()
+        val userAgent = request.header("User-Agent")
+        val headers = HashMap<String, String>()
+        val responseHeaders = response.headers()
+        val headersNames = responseHeaders.names()
+        for (name in headersNames) {
+            val value = responseHeaders.get(name)
+            if (value != null) {
+                headers[name] = value
+            }
+        }
+        val source = responseBody.source()
+        source.request(java.lang.Long.MAX_VALUE) // Buffer the entire body.
+        var buffer = source.buffer().clone()
+
+        if ("gzip".equals(headers["Content-Encoding"] ?: "", ignoreCase = true)) {
+            GzipSource(buffer.clone()).use { gzippedResponseBody ->
+                Buffer().use { buf ->
+                    buf.writeAll(gzippedResponseBody)
+                    buffer = buf.clone()
+                }
+            }
+        }
+
+        var charset: Charset? = UTF8
+        val contentType = responseBody.contentType()
+        if (contentType != null) {
+            charset = contentType.charset(UTF8)
+        }
+        if (charset == null) {
+            charset = UTF8
+        }
+        if (charset != null) {
+            val content = buffer.readString(charset)
+            buffer.close()
+            dataDomeSdk?.handleResponse(idToRedo, headers, response.code(), content)
+            return
+        } else {
+            buffer.close()
+        }
+        dataDomeSdk?.handleResponse(idToRedo, headers, response.code(), "")
+    }
+
+    fun manualRequest(idToRedo: Int?) {
+        val endpoint = Helper.getConfigValue(this, "datadome.endpoint")
+        val builder = OkHttpClient.Builder()
+        var headers = HashMap<String, String>()
+
+        headers["User-Agent"] = userAgent
+        headers["Accept"] = "application/json"
+
+        //addDataDomeHeaders
+        headers = dataDomeSdk?.addDataDomeHeaders(headers) as? HashMap<String, String> ?: HashMap<String, String>()
+
+        var req = Request.Builder()
+            .url(endpoint)
+        for (h in headers) {
+            req.addHeader(h.key, h.value)
+        }
+
+        val request = req.build()
+
+        val client = OkHttpClient()
+
+        var callback: Callback = object: Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.d(TAG,"ERROR")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val headers = HashMap<String, String>()
+                val responseHeaders = response.headers()
+                val headersNames = responseHeaders.names()
+                for (name in headersNames) {
+                    val value = responseHeaders.get(name)
+                    if (value != null) {
+                        headers[name] = value
+                    }
+                }
+                if (dataDomeSdk?.verifyResponse(headers, response.code(), applicationContext) ?: true) {
+                    Log.d("Manual response", "Response handle")
+                    handleBlockedResponse(response, idToRedo)
+                } else {
+                    Log.d("Manual response", "No response handle")
+                    runOnUiThread { Toast.makeText(this@MainActivity, "No response handled by DD", Toast.LENGTH_SHORT).show() }
+                }
+            }
+        }
+        client.newCall(request).enqueue(callback)
+    }
+
+    fun clickOnManualCallButton(v: View) {
+        val numberOfRequest = if (switchMultipleRequest.isChecked) 5 else 1
+        for (i in 1..numberOfRequest) {
+            manualRequest(i)
+        }
+    }
 }
+
