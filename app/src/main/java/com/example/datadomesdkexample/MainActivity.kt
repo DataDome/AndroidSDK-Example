@@ -324,7 +324,9 @@ class MainActivity: AppCompatActivity() {
                         headers[name] = value
                     }
                 }
-                if (dataDomeSdk?.verifyResponse(headers, response.code(), applicationContext) ?: true) {
+
+                val url = call.request().url().toString()
+                if (dataDomeSdk?.verifyResponse(url, headers, response.code(), applicationContext) != false) {
                     Log.d("Manual response", "Response handle")
                     handleBlockedResponse(response, idToRedo)
                 } else {
