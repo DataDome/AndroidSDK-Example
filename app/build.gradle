@@ -44,5 +44,5 @@ dependencies {
     implementation "com.squareup.okhttp3:okhttp:$okhttp3_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$okhttp3_version"
 
-    implementation 'com.github.DataDome:datadome-android-package:1.6.3'
+    implementation 'com.github.DataDome:datadome-android-package:1.6.4'
 }
