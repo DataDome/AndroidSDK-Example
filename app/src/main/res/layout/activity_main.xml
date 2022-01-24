@@ -12,20 +12,20 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="OkHttp Request"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            android:layout_marginEnd="15dp"/>
+            android:layout_marginEnd="15dp"
+            android:layout_marginTop="150dp"/>
 
     <Button
             android:id="@+id/manualButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Manual Request"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            android:layout_marginStart="15dp"/>
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="150dp"/>
 
     <TextView
             android:id="@+id/responseTextView"

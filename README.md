@@ -10,12 +10,17 @@ This sample show how to use __DataDomeSDK__ with the OKHTTP Interceptor and manu
 It is possible test the integration thanks to the multiple buttons.
 
 ##### User Agent
-You can change UserAgent between:
-- __*ALLOWUA*__ : A basic UserAgent. Request will generally pass Datadome.
-- __*BLOCKINGUA*__ : Request will be blocked each time by Datadome and a captcha will be shown.
+*BLOCKINGUA*: Request will be blocked each time by Datadome and a captcha will be shown.
+You can change add UserAgent to *BLOCKUA* by adding the header 
+__*OKHTTP*__ : val request = okhttp3.Request.Builder()
+                               .url(url)
+                               .addHeader("User-Agent", "BLOCKUA")
+                               .build()
+__*Manual Integration*__ :  addRequestProperty("User-Agent", "BLOCKUA")
+                               
 
 ##### Multiple requests
-If the switch is enabled, the request button will execute 5 requests and not only 1.
+You can perform multiple requests and the SDK will check every single request and retry all of them after the captcha check, and we make sure that the captcha is displayed only for the first request failure.
 
 ##### Cache
 It is possible to clear cache for triggering captcha again if you want to.
