@@ -44,5 +44,6 @@ dependencies {
     implementation "com.squareup.okhttp3:okhttp:$okhttp3_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$okhttp3_version"
 
-    implementation 'co.datadome.sdk:sdk:+'
+    implementation 'co.datadome.sdk:sdk:2.0.0'
+    implementation 'co.datadome.sdk:okhttp:2.0.0'
 }
